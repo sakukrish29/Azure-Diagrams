@@ -1,0 +1,126 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "adminPassword": {
+            "metadata": {
+                "description": "Password for the Virtual Machine."
+            },
+            "value": ""
+        },
+        "adminUsername": {
+            "metadata": {
+                "description": "Admin username"
+            },
+            "value": ""
+        },
+        "availabilitySetName": {
+            "metadata": {
+                "description": "Name of an availability set for the Virtual Machine."
+            },
+            "value": ""
+        },
+        "availabilityZone": {
+            "metadata": {
+                "description": "Availability zone of the Virtual Machine."
+            },
+            "value": ""
+        },
+        "bootDiagnosticsStorageAccountName": {
+            "metadata": {
+                "description": "Name of the Storage Account to use for Boot Diagnostics."
+            },
+            "value": ""
+        },
+        "dataDiskNames": {
+            "metadata": {
+                "description": "List of data disk names."
+            },
+            "value": []
+        },
+        "enableDataDiskUltraSsd": {
+            "metadata": {
+                "description": "Enable Ultra SSD capability for the data disks."
+            },
+            "value": false
+        },
+        "networkInterfaceName": {
+            "metadata": {
+                "description": "Network Interface Name."
+            },
+            "value": ""
+        },
+        "osDiskName": {
+            "metadata": {
+                "description": "OS disk Name."
+            },
+            "value": ""
+        },
+        "osDiskSizeInGB": {
+            "metadata": {
+                "description": "Size of the OS disk in GB."
+            },
+            "value": 0
+        },
+        "osDiskSku": {
+            "metadata": {
+                "description": "OS disk SKU."
+            },
+            "value": ""
+        },
+        "resourceTags": {
+            "metadata": {
+                "description": "Tags to help identify resources."
+            },
+            "value": ""
+        },
+        "useSystemAssignedManagedIdentity": {
+            "metadata": {
+                "description": "Use system assigned managed identity for the Virtual Machine."
+            },
+            "value": false
+        },
+        "virtualMachineImageOffer": {
+            "metadata": {
+                "description": "Virtual Machine image offer."
+            },
+            "value": "WindowsServer"
+        },
+        "virtualMachineImagePublisher": {
+            "metadata": {
+                "description": "Virtual Machine image publisher."
+            },
+            "value": "MicrosoftWindowsServer"
+        },
+        "virtualMachineImageSku": {
+            "metadata": {
+                "description": "Virtual Machine image SKU."
+            },
+            "value": "2016-Datacenter"
+        },
+        "virtualMachineLicenseType": {
+            "metadata": {
+                "description": "Specify that image used was licensed on-premises. Applicable only to images that contain Windows Server OS."
+            },
+            "value": ""
+        },
+        "virtualMachineName": {
+            "metadata": {
+                "description": "Name for the Virtual Machine."
+            },
+            "value": ""
+        },
+        "virtualMachineSize": {
+            "metadata": {
+                "description": "Size for the Virtual Machine."
+            },
+            "value": ""
+        },
+        "workspaceId": {
+            "metadata": {
+                "description": "Workspace Id for log analytics."
+            },
+            "value": ""
+        }
+    }
+}

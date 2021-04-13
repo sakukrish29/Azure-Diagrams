@@ -1,0 +1,257 @@
+parameters:
+- name: isProvisionedResourceTeardownRequired
+  displayName: Teardown all provisioned resources
+  type: boolean
+  default: true
+
+- name: environment
+  type: string
+
+- name: adminUsername
+  type: string
+
+- name: adminPassword
+  type: string
+
+- name: useSystemAssignedManagedIdentity
+  type: boolean
+
+- name: dataDiskNames
+  type: object
+
+- name: dataDiskSku
+  type: string
+
+- name: enableDataDiskUltraSsd
+  type: boolean
+
+- name: osDiskName
+  type: string
+
+- name: osDiskSizeInGB
+  type: number
+
+- name: osDiskSku
+  type: string
+
+- name: resourceGroupName
+  type: string
+
+- name: virtualMachineImageOffer
+  type: string
+
+- name: virtualMachineImagePublisher
+  type: string
+
+- name: virtualMachineImageSku
+  type: string
+
+- name: virtualMachineName
+  type: string
+
+- name: virtualMachineSize
+  type: string
+
+- name: availabilityZone
+  type: string
+
+- name: enableAcceleratedNetworking
+  type: boolean
+
+- name: connectedServiceName
+  type: string
+
+- name: subscriptionID
+  type: string
+
+- name: keyVaultName
+  type: string
+  default: 'mneu-kv-dev-$(Build.BuildId)$(System.StageName)-056'
+
+- name: networkInterfaceName
+  type: string
+  default: 'mneu-nic-dev-$(Build.BuildId)$(System.StageName)-056'
+
+- name: networkSecurityGroupName
+  type: string
+  default: 'mneu-nsg-dev-$(Build.BuildId)$(System.StageName)-056'
+
+- name: subnetName
+  type: string
+  default: 'mneu-subn-dev-$(Build.BuildId)$(System.StageName)-056'
+
+- name: virtualNetworkName
+  type: string
+  default: 'mneu-vnet-dev-$(Build.BuildId)$(System.StageName)-056'
+
+jobs:
+- job: setup
+  displayName: Provisioning dependencies
+  steps:
+  - checkout: self
+    path: paf
+
+  - template: /resources/AA.VirtualNetwork/AA.Network/resource-template.yml@self
+    parameters:
+      connectedServiceName: '${{ parameters.connectedServiceName }}'
+      resourceGroupName: '${{ parameters.resourceGroupName }}'
+      virtualNetworkAddressPrefix: 10.0.0.0/16
+      virtualNetworkName: '${{ parameters.virtualNetworkName }}'
+
+  - template: /resources/AA.NetworkSecurityGroup/resource-template.yml@self
+    parameters:
+      connectedServiceName: '${{ parameters.connectedServiceName }}'
+      networkSecurityGroupName: '${{ parameters.networkSecurityGroupName }}'
+      resourceGroupName: '${{ parameters.resourceGroupName }}'
+      subscriptionID: '${{ parameters.subscriptionID }}'
+
+  - template: /resources/AA.VirtualNetwork/AA.Subnet/resource-template.yml@self
+    parameters:
+      connectedServiceName: '${{ parameters.connectedServiceName }}'
+      networkSecurityGroupName: '${{ parameters.networkSecurityGroupName }}'
+      networkSecurityGroupResourceGroupName: '${{ parameters.resourceGroupName }}'
+      resourceGroupName: '${{ parameters.resourceGroupName }}'
+      subnetAddressPrefix: 10.0.1.0/24
+      subnetName: '${{ parameters.subnetName }}'
+      serviceEndpoints:
+        - Microsoft.KeyVault
+      virtualNetworkName: '${{ parameters.virtualNetworkName }}'
+
+  - template: /resources/AA.NetworkInterface/resource-template.yml@self
+    parameters:
+      connectedServiceName: '${{ parameters.connectedServiceName }}'
+      enableAcceleratedNetworking: '${{ parameters.enableAcceleratedNetworking }}'
+      networkInterfaceName: '${{ parameters.networkInterfaceName }}'
+      resourceGroupName: '${{ parameters.resourceGroupName }}'
+      subnetName: '${{ parameters.subnetName }}'
+      subscriptionID: '${{ parameters.subscriptionID }}'
+      virtualNetworkName: '${{ parameters.virtualNetworkName }}'
+
+  - ${{ each dataDiskName in parameters.dataDiskNames }}:
+    - template: /resources/AA.ManagedDisks/resource-template.yml@self
+      parameters:
+        connectedServiceName: '${{ parameters.connectedServiceName }}'
+        diskAvailabilityZones: '${{ coalesce(parameters.availabilityZone, 0) }}'
+        diskName: '${{ dataDiskName }}'
+        diskSku: '${{ parameters.dataDiskSku }}'
+        resourceGroupName: '${{ parameters.resourceGroupName }}'
+        subscriptionID: '${{ parameters.subscriptionID }}'
+
+  - template: /resources/AA.KeyVault/resource-template.yml@self
+    parameters:
+      connectedServiceName: '${{ parameters.connectedServiceName }}'
+      enabledForDiskEncryption: true 
+      keyVaultFirewall:
+        virtualNetworks:
+        - subnetName: '${{ parameters.subnetName }}'
+          virtualNetworkName: '${{ parameters.virtualNetworkName }}'
+      keyVaultName: '${{ parameters.keyVaultName }}'
+      keyVaultSoftDelete: false
+      resourceGroupName: '${{ parameters.resourceGroupName }}'
+      subscriptionID: '${{ parameters.subscriptionID }}'
+      userADEmailAddress: matteo.emili@angloamerican.com
+
+- job: execute
+  displayName: Executing resource template
+  condition: succeeded()
+  dependsOn: setup
+  steps:
+  - checkout: self
+    path: paf
+
+  - template: /resources/AA.VirtualMachine/AA.Windows/resource-template.yml@self
+    parameters:
+      adminPassword: '${{ parameters.adminPassword }}'
+      adminUsername: '${{ parameters.adminUsername }}'
+      availabilityZone: '${{ parameters.availabilityZone }}'
+      connectedServiceName: '${{ parameters.connectedServiceName }}'
+      dataDiskNames: '${{ parameters.dataDiskNames }}'
+      enableDataDiskUltraSsd: '${{ parameters.enableDataDiskUltraSsd }}'
+      environment: '${{ parameters.environment }}'
+      networkInterfaceName: ${{ parameters.networkInterfaceName }}
+      osDiskName: '${{ parameters.osDiskName }}'
+      osDiskSizeInGB: '${{ parameters.osDiskSizeInGB }}'
+      osDiskSku: '${{ parameters.osDiskSku }}'
+      resourceGroupName: '${{ parameters.resourceGroupName }}'
+      keyVaultName: '${{ parameters.keyVaultName }}'
+      subscriptionID: '${{ parameters.subscriptionID }}'
+      useSystemAssignedManagedIdentity: '${{ parameters.useSystemAssignedManagedIdentity }}'
+      virtualMachineImageOffer: '${{ parameters.virtualMachineImageOffer }}'
+      virtualMachineImagePublisher: '${{ parameters.virtualMachineImagePublisher }}'
+      virtualMachineImageSku: '${{ parameters.virtualMachineImageSku }}'
+      virtualMachineName: '${{ parameters.virtualMachineName }}'
+      virtualMachineSize: '${{ parameters.virtualMachineSize }}'
+      resourceTags:
+        SERVICEOWNER: andrew.stephenson@angloamerican.com
+
+- job: assert
+  condition: succeeded()
+  dependsOn: execute
+  displayName: Asserting Virtual Machine configuration
+  steps:
+  - checkout: self
+    path: paf
+
+  - template: /resources/AA.VirtualMachine/AA.Windows/AA.AssertVirtualMachineConfiguration/assert-virtual-machine-configuration.yml@self
+    parameters:
+      environment: '${{ parameters.environment }}'
+      adminUsername: '${{ parameters.adminUsername }}'
+      useSystemAssignedManagedIdentity: '${{ parameters.useSystemAssignedManagedIdentity }}'
+      dataDiskNames: '${{ parameters.dataDiskNames }}'
+      enableDataDiskUltraSsd: '${{ parameters.enableDataDiskUltraSsd }}'
+      osDiskName: '${{ parameters.osDiskName }}'
+      osDiskSizeInGB: '${{ parameters.osDiskSizeInGB }}'
+      osDiskSku: '${{ parameters.osDiskSku }}'
+      resourceGroupName: '${{ parameters.resourceGroupName }}'
+      keyVaultName: '${{ parameters.keyVaultName }}'
+      virtualMachineImageOffer: '${{ parameters.virtualMachineImageOffer }}'
+      virtualMachineImagePublisher: '${{ parameters.virtualMachineImagePublisher }}'
+      virtualMachineImageSku: '${{ parameters.virtualMachineImageSku }}'
+      virtualMachineName: '${{ parameters.virtualMachineName }}'
+      virtualMachineSize: '${{ parameters.virtualMachineSize }}'
+      availabilityZone: '${{ parameters.availabilityZone }}'
+      enableAcceleratedNetworking: '${{ parameters.enableAcceleratedNetworking }}'
+      networkInterfaceName: '${{ parameters.networkInterfaceName }}'
+      connectedServiceName: '${{ parameters.connectedServiceName }}'
+
+- job: teardown
+  displayName: Tearing down the template execution
+  condition: ${{ parameters.isProvisionedResourceTeardownRequired }}
+  dependsOn: assert
+  steps:
+  - template: /common/tools/AA.DeleteResources/delete-azure-resources.yml@self
+    parameters:
+      connectedServiceName: '${{ parameters.connectedServiceName }}'
+      resources:
+      - name: '${{ parameters.virtualMachineName }}'
+        resourceGroupName: '${{ parameters.resourceGroupName }}'
+        type: Microsoft.Compute/virtualMachines
+
+      - name: ${{ replace(parameters.virtualMachineName, '-', '') }}
+        resourceGroupName: '${{ parameters.resourceGroupName }}'
+        type: Microsoft.Storage/storageAccounts
+
+      - name: '${{ parameters.osDiskName }}'
+        resourceGroupName: '${{ parameters.resourceGroupName }}'
+        type: Microsoft.Compute/disks
+
+      - ${{ each dataDiskName in parameters.dataDiskNames }}:
+        - name: '${{ dataDiskName }}'
+          resourceGroupName: '${{ parameters.resourceGroupName }}'
+          type: Microsoft.Compute/disks
+
+      - name: '${{ parameters.keyVaultName }}'
+        resourceGroupName: '${{ parameters.resourceGroupName }}'
+        type: Microsoft.KeyVault/vaults
+
+      - name: '${{ parameters.networkInterfaceName }}'
+        resourceGroupName: '${{ parameters.resourceGroupName }}'
+        type: Microsoft.Network/networkInterfaces
+
+      - name: '${{ parameters.virtualNetworkName }}'
+        resourceGroupName: '${{ parameters.resourceGroupName }}'
+        type: Microsoft.Network/virtualNetworks
+
+      - name: '${{ parameters.networkSecurityGroupName }}'
+        resourceGroupName: '${{ parameters.resourceGroupName }}'
+        type: Microsoft.Network/networkSecurityGroups

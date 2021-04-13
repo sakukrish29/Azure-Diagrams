@@ -1,0 +1,265 @@
+# ------------------------------------------------------------------------------------ #
+# Description:
+#   Tests the deployment of the Linux Virtual Machine resource.
+# ------------------------------------------------------------------------------------ #
+
+trigger: none
+
+pool: DA-PBA
+
+parameters:
+- name: isProvisionedResourceTeardownRequired
+  displayName: Teardown all resources which were created by tests
+  type: boolean
+  default: true
+
+- name: isTest1Enabled
+  displayName: Run 'Default Windows Virtual Machine configuration test'
+  type: boolean
+  default: true
+
+- name: isTest2Enabled
+  displayName: Run 'Windows Virtual Machine in availability zone with two ultra data disks test'
+  type: boolean
+  default: false
+
+- name: isTest3Enabled
+  displayName: Run '2 vCore Windows Virtual Machine in sandbox environment without accelerated networking test'
+  type: boolean
+  default: false
+
+- name: isTest4Enabled
+  displayName: Run 'Windows Virtual Machine in production environment with system managed identity and lowest tier disks test'
+  type: boolean
+  default: false
+
+- name: isTest5Enabled
+  displayName: Run 'Windows 10 Virtual Machine in pre-production environment with bigger OS disk, in availability zone and with ultra data disk test'
+  type: boolean
+  default: false
+
+- name: isTest6Enabled
+  displayName: Run 'Default Windows Virtual Machine- 2 Data Disk'
+  type: boolean
+  default: false
+
+- name: isTest7Enabled
+  displayName: Run 'Default Windows Virtual Machine- 2 Data Disk In Availability Zone'
+  type: boolean
+  default: false
+
+variables:
+- template: ../../../config.yml
+
+- group: paf_test_pipelines
+
+- name: System.Debug
+  value: true
+
+stages:
+- stage: t1
+  displayName: Default Windows Virtual Machine configuration test
+  condition: and(not(canceled()), ${{ parameters.isTest1Enabled }})
+  jobs:
+  - template: /resources/AA.VirtualMachine/AA.Windows/resource-template-deployment.yml@self
+    parameters:
+      environment: dev
+      adminUsername: lcladmin
+      adminPassword: $(sndbx-adminPassword)
+      useSystemAssignedManagedIdentity: false
+      dataDiskNames:
+      - mneu-$(Build.BuildId)$(System.StageName)56-disk-002
+      dataDiskSku: StandardSSD_LRS
+      enableDataDiskUltraSsd: false
+      osDiskName: mneu-$(Build.BuildId)$(System.StageName)56-disk-001
+      osDiskSizeInGB: 128
+      osDiskSku: Premium_LRS
+      resourceGroupName: $(resourceGroupName)
+      virtualMachineImageOffer: WindowsServer
+      virtualMachineImagePublisher: MicrosoftWindowsServer
+      virtualMachineImageSku: 2016-Datacenter
+      virtualMachineName: mneu-$(Build.BuildId)$(System.StageName)56
+      virtualMachineSize: Standard_D4s_v3
+      availabilityZone: ''
+      enableAcceleratedNetworking: true
+      connectedServiceName: $(connectedServiceName)
+      subscriptionID: $(subscriptionID)
+      isProvisionedResourceTeardownRequired: '${{ parameters.isProvisionedResourceTeardownRequired }}'
+
+- stage: t2
+  displayName: Windows Virtual Machine in availability zone with two ultra data disks test
+  condition: and(not(canceled()), ${{ parameters.isTest2Enabled }})
+  jobs:
+  - template: /resources/AA.VirtualMachine/AA.Windows/resource-template-deployment.yml@self
+    parameters:
+      environment: dev
+      adminUsername: lcladmin
+      adminPassword: $(sndbx-adminPassword)
+      useSystemAssignedManagedIdentity: false
+      dataDiskNames:
+      - mneu-$(Build.BuildId)$(System.StageName)56-disk-002
+      - mneu-$(Build.BuildId)$(System.StageName)56-disk-003
+      dataDiskSku: UltraSSD_LRS
+      enableDataDiskUltraSsd: true
+      osDiskName: mneu-$(Build.BuildId)$(System.StageName)56-disk-001
+      osDiskSizeInGB: 128
+      osDiskSku: Premium_LRS
+      resourceGroupName: $(resourceGroupName)
+      virtualMachineImageOffer: WindowsServer
+      virtualMachineImagePublisher: MicrosoftWindowsServer
+      virtualMachineImageSku: 2016-Datacenter
+      virtualMachineName: mneu-$(Build.BuildId)$(System.StageName)56
+      virtualMachineSize: Standard_D4s_v3
+      availabilityZone: '1'
+      enableAcceleratedNetworking: true
+      connectedServiceName: $(connectedServiceName)
+      subscriptionID: $(subscriptionID)
+      isProvisionedResourceTeardownRequired: '${{ parameters.isProvisionedResourceTeardownRequired }}'
+
+- stage: t3
+  displayName: 2 vCore Windows Virtual Machine in sandbox environment without accelerated networking test
+  condition: and(not(canceled()), ${{ parameters.isTest3Enabled }})
+  jobs:
+  - template: /resources/AA.VirtualMachine/AA.Windows/resource-template-deployment.yml@self
+    parameters:
+      environment: sndbx
+      adminUsername: lcladmin
+      adminPassword: $(sndbx-adminPassword)
+      useSystemAssignedManagedIdentity: false
+      dataDiskNames:
+      - mneu-$(Build.BuildId)$(System.StageName)56-disk-002
+      dataDiskSku: StandardSSD_LRS
+      enableDataDiskUltraSsd: false
+      osDiskName: mneu-$(Build.BuildId)$(System.StageName)56-disk-001
+      osDiskSizeInGB: 128
+      osDiskSku: Premium_LRS
+      resourceGroupName: $(resourceGroupName)
+      virtualMachineImageOffer: WindowsServer
+      virtualMachineImagePublisher: MicrosoftWindowsServer
+      virtualMachineImageSku: 2016-Datacenter
+      virtualMachineName: mneu-$(Build.BuildId)$(System.StageName)56
+      virtualMachineSize: Standard_D2s_v3
+      availabilityZone: ''
+      enableAcceleratedNetworking: false
+      connectedServiceName: $(connectedServiceName)
+      subscriptionID: $(subscriptionID)
+      isProvisionedResourceTeardownRequired: '${{ parameters.isProvisionedResourceTeardownRequired }}'
+
+- stage: t4
+  displayName: Windows Virtual Machine in production environment with system managed identity and lowest tier disks test
+  condition: and(not(canceled()), ${{ parameters.isTest4Enabled }})
+  jobs:
+  - template: /resources/AA.VirtualMachine/AA.Windows/resource-template-deployment.yml@self
+    parameters:
+      environment: prod
+      adminUsername: lcladmin
+      adminPassword: $(sndbx-adminPassword)
+      useSystemAssignedManagedIdentity: true
+      dataDiskNames:
+      - mneu-$(Build.BuildId)$(System.StageName)56-disk-002
+      dataDiskSku: Standard_LRS
+      enableDataDiskUltraSsd: false
+      osDiskName: mneu-$(Build.BuildId)$(System.StageName)56-disk-001
+      osDiskSizeInGB: 128
+      osDiskSku: Standard_LRS
+      resourceGroupName: $(resourceGroupName)
+      virtualMachineImageOffer: WindowsServer
+      virtualMachineImagePublisher: MicrosoftWindowsServer
+      virtualMachineImageSku: 2016-Datacenter
+      virtualMachineName: mneu-$(Build.BuildId)$(System.StageName)56
+      virtualMachineSize: Standard_D4s_v3
+      availabilityZone: ''
+      enableAcceleratedNetworking: true
+      connectedServiceName: $(connectedServiceName)
+      subscriptionID: $(subscriptionID)
+      isProvisionedResourceTeardownRequired: '${{ parameters.isProvisionedResourceTeardownRequired }}'
+
+- stage: t5
+  displayName: Windows 10 Virtual Machine in pre-production environment with bigger OS disk, in availability zone and with ultra data disk test
+  condition: and(not(canceled()), ${{ parameters.isTest5Enabled }})
+  jobs:
+  - template: /resources/AA.VirtualMachine/AA.Windows/resource-template-deployment.yml@self
+    parameters:
+      environment: preprod
+      adminUsername: lcladmin
+      adminPassword: $(sndbx-adminPassword)
+      useSystemAssignedManagedIdentity: false
+      dataDiskNames:
+      - mneu-$(Build.BuildId)$(System.StageName)56-disk-002
+      dataDiskSku: UltraSSD_LRS
+      enableDataDiskUltraSsd: true
+      osDiskName: mneu-$(Build.BuildId)$(System.StageName)56-disk-001
+      osDiskSizeInGB: 256
+      osDiskSku: Premium_LRS
+      resourceGroupName: $(resourceGroupName)
+      virtualMachineImageOffer: Windows-10
+      virtualMachineImagePublisher: MicrosoftWindowsDesktop
+      virtualMachineImageSku: rs5-pro
+      virtualMachineName: mneu-$(Build.BuildId)$(System.StageName)56
+      virtualMachineSize: Standard_D4s_v3
+      availabilityZone: '1'
+      enableAcceleratedNetworking: true
+      connectedServiceName: $(connectedServiceName)
+      subscriptionID: $(subscriptionID)
+      isProvisionedResourceTeardownRequired: '${{ parameters.isProvisionedResourceTeardownRequired }}'
+  
+
+- stage: t6
+  displayName: 2DataDisk-Win-Default 
+  condition: and(not(canceled()), ${{ parameters.isTest6Enabled }})
+  jobs:
+  - template: /resources/AA.VirtualMachine/AA.Windows/resource-template-deployment.yml@self
+    parameters:
+      environment: dev
+      adminUsername: lcladmin
+      adminPassword: $(sndbx-adminPassword)
+      useSystemAssignedManagedIdentity: false
+      dataDiskNames:
+      - mneu-$(Build.BuildId)$(System.StageName)56-disk-002
+      - mneu-$(Build.BuildId)$(System.StageName)56-disk-003
+      dataDiskSku: StandardSSD_LRS
+      enableDataDiskUltraSsd: false
+      osDiskName: mneu-$(Build.BuildId)$(System.StageName)56-disk-001
+      osDiskSizeInGB: 128
+      osDiskSku: Premium_LRS
+      resourceGroupName: $(resourceGroupName)
+      virtualMachineImageOffer: WindowsServer
+      virtualMachineImagePublisher: MicrosoftWindowsServer
+      virtualMachineImageSku: 2016-Datacenter
+      virtualMachineName: mneu-$(Build.BuildId)$(System.StageName)56
+      virtualMachineSize: Standard_D4s_v3
+      availabilityZone: ''
+      enableAcceleratedNetworking: true
+      connectedServiceName: $(connectedServiceName)
+      subscriptionID: $(subscriptionID)
+      isProvisionedResourceTeardownRequired: '${{ parameters.isProvisionedResourceTeardownRequired }}'
+
+- stage: t7
+  displayName: 2DataDisk-UD-Win-Default-availabilityZone
+  condition: and(not(canceled()), ${{ parameters.isTest7Enabled }})
+  jobs:
+  - template: /resources/AA.VirtualMachine/AA.Windows/resource-template-deployment.yml@self
+    parameters:
+      environment: dev
+      adminUsername: lcladmin
+      adminPassword: $(sndbx-adminPassword)
+      useSystemAssignedManagedIdentity: false
+      dataDiskNames:
+      - mneu-$(Build.BuildId)$(System.StageName)56-disk-002
+      - mneu-$(Build.BuildId)$(System.StageName)56-disk-003
+      dataDiskSku: UltraSSD_LRS
+      enableDataDiskUltraSsd: true
+      osDiskName: mneu-$(Build.BuildId)$(System.StageName)56-disk-001
+      osDiskSizeInGB: 128
+      osDiskSku: Premium_LRS
+      resourceGroupName: $(resourceGroupName)
+      virtualMachineImageOffer: WindowsServer
+      virtualMachineImagePublisher: MicrosoftWindowsServer
+      virtualMachineImageSku: 2016-Datacenter
+      virtualMachineName: mneu-$(Build.BuildId)$(System.StageName)56
+      virtualMachineSize: Standard_D4s_v3
+      availabilityZone: '1'
+      enableAcceleratedNetworking: true
+      connectedServiceName: $(connectedServiceName)
+      subscriptionID: $(subscriptionID)
+      isProvisionedResourceTeardownRequired: '${{ parameters.isProvisionedResourceTeardownRequired }}'

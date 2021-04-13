@@ -1,0 +1,266 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "adminPassword": {
+            "type": "securestring",
+            "metadata": {
+                "description": "Password for the Virtual Machine."
+            }
+        },
+        "adminUsername": {
+            "type": "string",
+            "metadata": {
+                "description": "User name for the Virtual Machine."
+            }
+        },
+        "availabilitySetName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of an availability set for the Virtual Machine."
+            }
+        },
+        "availabilityZone": {
+            "type": "string",
+            "metadata": {
+                "description": "Availability zone of the Virtual Machine."
+            }
+        },
+        "bootDiagnosticsStorageAccountName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the Storage Account to use for Boot Diagnostics."
+            }
+        },
+        "dataDiskNames": {
+            "type": "array",
+            "metadata": {
+                "description": "List of data disk names."
+            }
+        },
+        "enableDataDiskUltraSsd": {
+            "type": "bool",
+            "metadata": {
+                "description": "Enable Ultra SSD capability for the data disks."
+            }
+        },
+        "networkInterfaceName": {
+            "type": "string",
+            "metadata": {
+                "description": "Network Interface Name."
+            }
+        },
+        "osDiskName": {
+            "type": "string",
+            "metadata": {
+                "description": "OS disk name."
+            }
+        },
+        "osDiskSizeInGB": {
+            "type": "int",
+            "metadata": {
+                "description": "Size of the OS disk in GB."
+            }
+        },
+        "osDiskSku": {
+            "type": "string",
+            "metadata": {
+                "description": "OS disk SKU."
+            }
+        },
+        "resourceTags": {
+            "type": "object",
+            "metadata": {
+                "description": "Tags to help identify resources."
+            }
+        },
+        "useSystemAssignedManagedIdentity": {
+            "type": "bool",
+            "metadata": {
+                "description": "Use system assigned managed identity for the Virtual Machine."
+            }
+        },
+        "virtualMachineImageOffer": {
+            "type": "string",
+            "metadata": {
+                "description": "Virtual Machine image offer."
+            }
+        },
+        "virtualMachineImagePublisher": {
+            "type": "string",
+            "metadata": {
+                "description": "Virtual Machine image publisher."
+            }
+        },
+        "virtualMachineImageSku": {
+            "type": "string",
+            "metadata": {
+                "description": "Virtual Machine image SKU."
+            }
+        },
+        "virtualMachineLicenseType": {
+            "type": "string",
+            "metadata": {
+                "description": "Specify that image used was licensed on-premises. Applicable only to images that contain Windows Server OS."
+            }
+        },
+        "virtualMachineName": {
+            "type": "string",
+            "defaultValue": "",
+            "metadata": {
+                "description": "Name for the Virtual Machine."
+            }
+        },
+        "virtualMachineSize": {
+            "type": "string",
+            "metadata": {
+                "description": "Size for the Virtual Machine."
+            }
+        },
+        "workspaceId": {
+            "type": "string",
+            "metadata": {
+                "description": "Workspace Id for log analytics."
+            }
+        }
+    },
+    "variables": {
+        "availabilitySetConfiguration": {
+            "id": "[resourceId('Microsoft.Compute/availabilitySets', parameters('availabilitySetName'))]"
+        },
+        "availabilityZoneConfiguration": "[concat('[ \"', parameters('availabilityZone'), '\" ]')]"
+    },
+    "resources": [
+        {
+            "name": "[parameters('virtualMachineName')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2019-07-01",
+            "location": "[resourceGroup().location]",
+            "properties": {
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                        "enabled": true,
+                        "storageUri": "[concat('https://', parameters('bootDiagnosticsStorageAccountName'), '.blob.core.windows.net')]"
+                    }
+                },
+                "hardwareProfile": {
+                    "vmSize": "[parameters('virtualMachineSize')]"
+                },
+                "licenseType": "[if(empty(parameters('virtualMachineLicenseType')), json('null'), parameters('virtualMachineLicenseType'))]",
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', parameters('networkInterfaceName'))]"
+                        }
+                    ]
+                },
+                "osProfile": {
+                    "adminPassword": "[parameters('adminPassword')]",
+                    "adminUsername": "[parameters('adminUsername')]",
+                    "computerName": "[parameters('virtualMachineName')]"
+                },
+                "additionalCapabilities": {
+                    "ultraSSDEnabled": "[parameters('enableDataDiskUltraSsd')]"
+                },
+                "storageProfile": {
+                    "copy": [
+                        {
+                            "name": "dataDisks",
+                            "count": "[length(parameters('dataDiskNames'))]",
+                            "input": {
+                                "createOption": "Attach",
+                                "lun": "[copyIndex('dataDisks')]",
+                                "managedDisk": {
+                                    "id": "[resourceId('Microsoft.Compute/disks', parameters('dataDiskNames')[copyIndex('dataDisks')])]"
+                                }
+                            }
+                        }
+                    ],
+                    "imageReference": {
+                        "offer": "[parameters('virtualMachineImageOffer')]",
+                        "publisher": "[parameters('virtualMachineImagePublisher')]",
+                        "sku": "[parameters('virtualMachineImageSku')]",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "name": "[parameters('osDiskName')]",
+                        "createOption": "FromImage",
+                        "diskSizeGB": "[parameters('osDiskSizeInGB')]",
+                        "managedDisk": {
+                            "storageAccountType": "[parameters('osDiskSku')]"
+                        },
+                        "osType": "Windows"
+                    }
+                },
+                "availabilitySet": "[if(empty(parameters('availabilitySetName')), json('null'), variables('availabilitySetConfiguration'))]"
+            },
+            "identity": "[if(parameters('useSystemAssignedManagedIdentity'), json('{ \"type\": \"SystemAssigned\" }'), json('null'))]",
+            "zones": "[if(empty(parameters('availabilityZone')), json('null'), json(variables('availabilityZoneConfiguration')))]",
+            "tags": "[parameters('resourceTags')]"
+        },
+        {
+            "name": "[concat(parameters('virtualMachineName'),'/DAExtension')]",
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "apiVersion": "[providers('Microsoft.Compute','virtualMachines/extensions').apiVersions[0]]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', parameters('virtualMachineName'))]"
+            ],
+            "properties": {
+                "publisher": "Microsoft.Azure.Monitoring.DependencyAgent",
+                "type": "DependencyAgentWindows",
+                "typeHandlerVersion": "9.5",
+                "autoUpgradeMinorVersion": true
+            }
+        },
+        {
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "name": "[concat(parameters('virtualMachineName'),'/', 'malware')]",
+            "apiVersion": "[providers('Microsoft.Compute','virtualMachines/extensions').apiVersions[0]]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', parameters('virtualMachineName'))]"
+            ],
+
+            "properties": {
+                "publisher": "Microsoft.Azure.Security",
+                "type": "IaaSAntimalware",
+                "typeHandlerVersion": "1.3",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "AntimalwareEnabled": true,
+                    "RealtimeProtectionEnabled": "true",
+                    "ScheduledScanSettings": {
+                        "isEnabled": "true",
+                        "scanType": "Quick",
+                        "day": "7",
+                        "time": "120"
+                    }
+                },
+                "protectedSettings": null
+            }
+        },
+        {
+            "name": "[concat(parameters('virtualMachineName'),'/OMSExtension')]",
+            "type": "Microsoft.Compute/virtualMachines/extensions",
+            "apiVersion": "[providers('Microsoft.Compute','virtualMachines/extensions').apiVersions[0]]",
+            "location": "[resourceGroup().location]",
+            "dependsOn": [
+                "[concat('Microsoft.Compute/virtualMachines/', parameters('virtualMachineName'))]"
+            ],
+            "properties": {
+                "publisher": "Microsoft.EnterpriseCloud.Monitoring",
+                "type": "MicrosoftMonitoringAgent",
+                "typeHandlerVersion": "1.0",
+                "autoUpgradeMinorVersion": true,
+                "settings": {
+                    "workspaceId": "[reference(parameters('workspaceId'), '2020-08-01').customerId]"
+                },
+                "protectedSettings": {
+                    "workspaceKey": "[listKeys(parameters('workspaceId'), '2020-08-01').primarySharedKey]"
+                }
+            }
+        }
+    ],
+    "outputs": {}
+}

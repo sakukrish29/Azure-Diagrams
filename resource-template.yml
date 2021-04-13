@@ -1,0 +1,277 @@
+# ------------------------------------------------------------------------------------ #
+# Description:
+#   Template for deploying the Windows Virtual Machine resource.
+# ------------------------------------------------------------------------------------ #
+parameters:
+- name: adminPassword
+  type: string
+
+- name: adminUsername
+  type: string
+  default: lcladmin
+
+- name: availabilitySetName
+  type: string
+  default: '' 
+  
+- name: availabilityZone
+  type: string
+  default: ''
+
+- name: connectedServiceName
+  type: string
+
+- name: dataDiskNames
+  type: object
+
+- name: enableDataDiskUltraSsd
+  type: boolean
+  default: False
+
+- name: enableHybridLicensing
+  type: boolean
+  default: true
+
+- name: environment
+  type: string
+  default: $(environment)
+
+- name: keyVaultName
+  type: string
+
+- name: networkInterfaceName
+  type: string
+  default: $(site)-nic-$(environment)-$(role)-$(increment)
+
+- name: osDiskName
+  type: string
+  default: ''
+
+- name: osDiskSizeInGB
+  type: number
+  default: 128
+
+- name: osDiskSku
+  type: string
+  default: Premium_LRS
+
+- name: resourceGroupLocation
+  type: string
+  default: ''
+
+- name: resourceGroupName
+  type: string
+
+- name: resourceTags
+  type: object
+  default: {}
+
+- name: resourceTagsString
+  type: string
+  default: ''
+
+- name: subscriptionID
+  type: string
+
+- name: useSystemAssignedManagedIdentity
+  type: boolean
+  default: False
+
+- name: virtualMachineImageOffer
+  type: string
+  default: WindowsServer
+
+- name: virtualMachineImagePublisher
+  type: string
+  default: MicrosoftWindowsServer
+
+- name: virtualMachineImageSku
+  type: string
+  default: 2016-Datacenter
+
+- name: virtualMachineName
+  type: string
+
+- name: virtualMachineSize
+  type: string
+  default: Standard_D4s_v3
+
+steps:
+# Generates the name for the OS disk when it isn't provided
+- ${{ if not(parameters.osDiskName) }}:
+  - template: ../AA.CommonTasks/AA.OSDiskName/new-os-disk-name.yml
+    parameters:
+      virtualMachineName: '${{ parameters.virtualMachineName }}'
+      outputVariable: _osDiskName  
+
+# Adds warning to the pipeline's run summary if default values are used
+- template: ../../../common/tasks/AA.LogDefaultParameterValueWarning/log-multiple-default-parameter-value-warnings.yml
+  parameters:
+    parameterValuePairs: |
+      'adminUsername = ${{ parameters.adminUsername }}, lcladmin'
+      'enableDataDiskUltraSsd = ${{ parameters.enableDataDiskUltraSsd }}, False'
+      'osDiskSizeInGB = ${{ parameters.osDiskSizeInGB }}, 32'
+      'osDiskSku = ${{ parameters.osDiskSku }}, Premium_LRS'
+      'useSystemAssignedManagedIdentity = ${{ parameters.useSystemAssignedManagedIdentity }}, False'
+      'virtualMachineImageOffer = ${{ parameters.virtualMachineImageOffer }}, WindowsServer'
+      'virtualMachineImagePublisher = ${{ parameters.virtualMachineImagePublisher }}, MicrosoftWindowsServer'
+      'virtualMachineImageSku = ${{ parameters.virtualMachineImageSku }}, 2016-Datacenter'
+      'virtualMachineSize = ${{ parameters.virtualMachineSize }}, Standard_D4s_v3'
+    resourceName: Virtual Machine
+
+# Validates that all the template parameters match the template schema.
+- template: ../../../common/validation/AA.Parameters/validate-parameters.yml
+  parameters:
+    excludeParameterNames:
+    - ${{ if not(parameters.availabilitySetName) }}:
+      - availabilitySetName
+    - ${{ if not(parameters.availabilityZone) }}:
+      - availabilityZone
+    - ${{ if not(parameters.resourceGroupLocation) }}:
+      - resourceGroupLocation
+    - ${{ if not(parameters.resourceTagsString) }}:
+      - resourceTagsString
+    - ${{ if not(parameters.osDiskName) }}:
+      - osDiskName  
+    - dataDiskNames
+    - resourceTags
+    - virtualMachineImageSku
+    name: vm
+    parameters: '${{ parameters }}'
+    schemaPath: $(Agent.BuildDirectory)/paf/resources/AA.VirtualMachine/AA.Windows/resource-template-schema.yml
+
+# Deploys a new Storage Account if sndbx environment is selected.
+- ${{ if eq(parameters.environment, 'sndbx') }}:
+  - template: ../AA.CommonTasks/AA.BootDiagnostics/AA.NewSndbxStorageAccountName/new-sndbx-storage-account-name.yml
+    parameters:
+      virtualMachineName: '${{ parameters.virtualMachineName }}'
+      outputVariable: _storageAccountName
+
+  - template: ../../AA.StorageAccount/resource-template.yml
+    parameters:
+      connectedServiceName: '${{ parameters.connectedServiceName }}'
+      resourceGroupName: '${{ parameters.resourceGroupName }}'
+      storageAccountName: $(_storageAccountName)
+      storageAccountFirewall:
+        enabled: false
+      subscriptionID: '${{ parameters.subscriptionID }}'
+
+# Either derives the tags from the resource group, or uses the supplied resource tags to override.
+- ${{ if not(parameters.resourceTagsString) }}:
+  - template: ../../../common/tasks/AA.ResourceTags/build-resource-tags.yml
+    parameters:
+      connectedServiceName: '${{ parameters.connectedServiceName }}'
+      name: vm
+      outputVariable: _resourceTags
+      resourceGroupName: '${{ parameters.resourceGroupName }}'
+      resourceTags: '${{ parameters.resourceTags }}'
+
+  # Adds backup tags to the VM resource if the prod environment is selected
+  - template: ../AA.CommonTasks/AA.Tags/AA.AddBackupTags/add-backup-tags.yml
+    parameters:
+      condition: ${{ eq(parameters.environment, 'prod') }}
+      outputVariable: _resourceTags
+      resourceTags: $(_resourceTags)
+
+  # Adds auto-shutdown tag to the VM resource if dev or sndbx environments are selected
+  - template: ../AA.CommonTasks/AA.Tags/AA.AddAutoShutdownTag/add-auto-shutdown-tag.yml
+    parameters:
+      condition: ${{ or(eq(parameters.environment, 'dev'), eq(parameters.environment, 'sndbx')) }}
+      outputVariable: _resourceTags
+      resourceTags: $(_resourceTags)
+
+# Adds version tag to the resource
+- template: ../../../common/tasks/AA.AddVersionTag/add-version-tag.yml
+  parameters: 
+    ${{ if parameters.resourceTagsString }}:
+      resourceTags: ${{ parameters.resourceTagsString }}
+    ${{ if not(parameters.resourceTagsString ) }}:
+      resourceTags: $(_resourceTags)
+    outputVariable: _resourceTagsWithVersionTag
+    version: Foundation.VirtualMachine.Windows.1.0
+
+# Gets the location of the resource group, if it wasn't supplied.
+- ${{ if not(parameters.resourceGroupLocation) }}:
+  - template: ../../../common/tasks/AA.ResourceGroupLocation/get-resource-group-location.yml
+    parameters:
+      connectedServiceName: '${{ parameters.connectedServiceName }}'
+      name: vm
+      outputVariable: _resourceGroupLocation
+      resourceGroupName: '${{ parameters.resourceGroupName }}'
+        
+# Generate the name of an exisitng Storage Account for boot diagnostics, if sndbx environment isn't selected.
+- ${{ if ne(parameters.environment, 'sndbx') }}:
+  - template: ../AA.CommonTasks/AA.BootDiagnostics/AA.NewStorageAccountName/new-storage-account-name.yml
+    parameters:
+      ${{ if parameters.resourceGroupLocation}}:
+        virtualMachineLocation: '${{ parameters.resourceGroupLocation }}'
+      ${{ if not(parameters.resourceGroupLocation) }}:
+        virtualMachineLocation: $(_resourceGroupLocation)
+      outputVariable: _storageAccountName
+      subscriptionID: '${{ parameters.subscriptionID }}'
+
+# Generate the Workspace name for log diagnostics.
+- template: ../AA.CommonTasks/AA.WorkspaceID/new-workspace-id.yml
+  parameters:
+    subscriptionID: '${{ parameters.subscriptionID }}'
+    outputVariable: _workspaceId
+
+# Builds the override parameters, to be used for the ARM template deployment.
+- template: ../../../common/tasks/AA.BuildOverrideParameters/build-override-parameters.yml
+  parameters:
+    name: vm
+    outputVariable: _overrideParameters
+    overrideParameters:
+      ${{ if or(eq(parameters.environment, 'preprod'), eq(parameters.environment, 'prod')) }}: 
+        ${{ if eq(parameters.virtualMachineImageOffer, 'WindowsServer') }}:
+          ${{ if eq(parameters.enableHybridLicensing, true) }}:
+            virtualMachineLicenseType: 'Windows_Server'
+      adminPassword: '${{ parameters.adminPassword }}'
+      adminUsername: '${{ parameters.adminUsername }}'
+      availabilitySetName: '${{ parameters.availabilitySetName }}'
+      availabilityZone: '${{ parameters.availabilityZone }}'
+      bootDiagnosticsStorageAccountName: $(_storageAccountName)
+      enableDataDiskUltraSsd: '${{ parameters.enableDataDiskUltraSsd }}'
+      networkInterfaceName: '${{ parameters.networkInterfaceName }}'
+      ${{ if not(parameters.osDiskName) }}:
+        osDiskName: $(_osDiskName)
+      ${{ if parameters.osDiskName }}:
+        osDiskName: '${{ parameters.osDiskName }}'
+      osDiskSizeInGB: '${{ parameters.osDiskSizeInGB }}'
+      osDiskSku: '${{ parameters.osDiskSku }}'
+      useSystemAssignedManagedIdentity: '${{ parameters.useSystemAssignedManagedIdentity }}'
+      virtualMachineImageOffer: '${{ parameters.virtualMachineImageOffer }}'
+      virtualMachineImagePublisher: '${{ parameters.virtualMachineImagePublisher }}'
+      virtualMachineImageSku: '${{ parameters.virtualMachineImageSku }}'
+      virtualMachineName: '${{ parameters.virtualMachineName }}'
+      virtualMachineSize: '${{ parameters.virtualMachineSize }}'
+      workspaceId: $(_workspaceId)
+    overrideArrayParameters:
+      dataDiskNames: '${{ parameters.dataDiskNames }}'
+
+# Deploy the resource using the ARM template.
+- task: AzureResourceManagerTemplateDeployment@3
+  displayName: 'vm: Deploying the ARM template for "${{ parameters.virtualMachineName }}"'
+  inputs:
+    ${{ if not(parameters.resourceGroupLocation) }}:
+      location: $(_resourceGroupLocation)
+    ${{ if parameters.resourceGroupLocation }}:
+      location: '${{ parameters.resourceGroupLocation }}'
+    overrideParameters: $(_overrideParameters) -resourceTags $(_resourceTagsWithVersionTag)
+    action: Create Or Update Resource Group
+    connectedServiceName: '${{ parameters.connectedServiceName }}'
+    csmFile: $(Agent.BuildDirectory)/paf/resources/AA.VirtualMachine/AA.Windows/VirtualMachine.Template.json
+    csmParametersFile: $(Agent.BuildDirectory)/paf/resources/AA.VirtualMachine/AA.Windows/VirtualMachine.Parameters.json
+    deploymentMode: Incremental
+    deploymentScope: Resource Group
+    resourceGroupName: '${{ parameters.resourceGroupName }}'
+    subscriptionName: '${{ parameters.subscriptionID }}'
+    templateLocation: Linked artifact
+
+# Set Disk Encryption Extension
+- template: ../AA.CommonTasks/AA.DiskEncryption/set-disk-encryption.yml
+  parameters:
+    connectedServiceName: '${{ parameters.connectedServiceName }}'    
+    keyVaultName: '${{ parameters.keyVaultName }}'
+    resourceGroupName: '${{ parameters.resourceGroupName }}'
+    virtualMachineName: '${{ parameters.virtualMachineName }}'
