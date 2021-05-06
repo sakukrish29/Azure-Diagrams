@@ -1,0 +1,101 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "applicationInsightsName": {
+            "type": "string",
+            "metadata": {
+            "description": "Name of the Application Insights resource."
+            }
+        },
+        "applicationInsightsResourceGroupName": {
+            "type": "string",
+            "metadata": {
+            "description": "Name of the Application Insights Resource Group."
+            }
+        },
+        "applicationServicePlanName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the Application Service Plan resource being used."
+            }
+        },
+        "applicationServicePlanResourceGroupName": {
+            "type": "string",
+            "metadata": {
+                "description": "Name of the Application Service Plan resource being used."
+            }
+        },
+        "functionAppName": {
+            "type": "string",
+            "metadata": {
+            "description": "The name of the Function App that you wish to create."
+            }
+        },
+        "resourceTags": {
+            "type": "object",
+            "metadata": {
+                "description": "Tags to help identify the resources."
+            }
+        },
+        "storageAccountName": {
+            "type": "string",
+            "metadata": {
+            "description": "The Storage Account name."
+            }
+        },
+        "storageAccountResourceGroupName": {
+            "type": "string",
+            "defaultValue": "mneu-rg-dev-sndbxdaresources-001",
+            "metadata": {
+            "description": "The resource group name for the Storage Account."
+            }
+        }
+    },
+    "resources": [
+        {
+            "apiVersion": "2018-11-01",
+            "type": "Microsoft.Web/sites",
+            "name": "[parameters('functionAppName')]",
+            "location": "[resourceGroup().location]",
+            "tags": "[parameters('resourceTags')]",
+            "kind": "functionapp",
+            "properties": {
+                "name": "[parameters('functionAppName')]",
+                "clientAffinityEnabled": false,
+                "subscriptionid": "[subscription().subscriptionID]",
+                "serverFarmId": "[resourceId(parameters('applicationServicePlanResourceGroupName'), 'Microsoft.Web/serverfarms', parameters('applicationServicePlanName'))]",
+                "siteConfig": {
+                    "appSettings": [
+                        {
+                        "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+                        "value": "[reference(resourceId(parameters('applicationInsightsResourceGroupName'), 'microsoft.insights/components/', parameters('applicationInsightsName')), '2015-05-01').InstrumentationKey]"
+                        },
+                        {
+                        "name": "AzureWebJobsDashboard",
+                        "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';EndpointSuffix=', environment().suffixes.storage, ';AccountKey=',listKeys(resourceId(parameters('storageAccountResourceGroupName'), 'Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2019-06-01').keys[0].value)]"
+                        },
+                        {
+                        "name": "AzureWebJobsStorage",
+                        "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', parameters('storageAccountName'), ';EndpointSuffix=', environment().suffixes.storage, ';AccountKey=',listKeys(resourceId(parameters('storageAccountResourceGroupName'), 'Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2019-06-01').keys[0].value)]"
+                        },
+                        {
+                        "name": "FUNCTIONS_WORKER_RUNTIME",
+                        "value": "node"
+                        },
+                        {
+                        "name": "WEBSITE_NODE_DEFAULT_VERSION",
+                        "value": "10.14.1"
+                        },
+                        {
+                        "name": "FUNCTIONS_EXTENSION_VERSION",
+                        "value": "~2"
+                        }
+                    ]
+                }
+            }
+        }
+    ]
+}
+
+

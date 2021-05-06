@@ -2,113 +2,99 @@
 type: object
 additionalProperties: false
 required:
-- adminPassword
-- adminUsername
+- applicationInsightsName
+- applicationInsightsResourceGroupName
+- applicationServicePlanName
+- applicationServicePlanResourceGroupName
+- applicationServicePlanSize
+- applicationServicePlanTier
 - connectedServiceName
-- environment
-- keyVaultName
-- networkInterfaceName
-- osDiskName
-- osDiskSizeInGB
-- osDiskSku
+- functionAppDiagnosticSettings
+- functionAppName
 - resourceGroupName
+- resourceGroupLocation
 - resourceTags
+- storageAccountName
+- storageAccountResourceGroupName
 - subscriptionID
-- virtualMachineImageOffer
-- virtualMachineImagePublisher
-- virtualMachineImageSku
-- virtualMachineName
-- virtualMachineSize
 properties:
-  adminPassword:
-    type: string
-  adminUsername:
-    maxLength: 64
+  applicationInsightsName:
+    maxLength: 40
     minLength: 1
-    pattern: '^[a-zA-Z_][a-zA-Z0-9-_]*$'
+    pattern: '^[a-zA-Z0-9-]+$'
     type: string
-  availabilitySetName:
-    minLength: 2
-    maxLength: 80
-    pattern: '^[a-zA-Z0-9][a-zA-Z0-9-._]*[a-zA-Z0-9_]$'
+  applicationInsightsResourceGroupName:
+    maxLength: 40
+    minLength: 1
+    pattern: '^[a-zA-Z0-9-]+$'
+    type: string  
+  applicationServicePlanName:
+    maxLength: 40
+    minLength: 1
+    pattern: '^[a-zA-Z0-9-]+$'
     type: string
-  availabilityZone:
-    maximum: 9
-    minimum: 1
-    type: integer
+  applicationServicePlanResourceGroupName:
+    maxLength: 40
+    minLength: 1
+    pattern: '^[a-zA-Z0-9-]+$'
+    type: string
+  applicationServicePlanSize:
+    type: string
+    enum:
+    - D1
+    - F1
+    - B1
+    - B2
+    - B3
+    - S1
+    - S2
+    - S3
+    - P1
+    - P2
+    - P3
+    - P1V2
+    - P2V2
+    - P3V2
+    - I1
+    - I2
+    - I3
+    - Y1
+  applicationServicePlanTier:
+    type: string
+    enum:
+    - Basic
+    - Standard
+    - Premium
+    - PremiumV2
+    - Isolated
+    - Dynamic
   connectedServiceName:
+    type: string
+  functionAppDiagnosticSettings:
+    type: object
+  functionAppName:
+    maxLength: 40
     minLength: 1
-    type: string
-  enableDataDiskUltraSsd:
-    type: boolean
-  enableHybridLicensing:
-    type: boolean
-  environment: 
-    type: string
-    enum:
-    - dev
-    - preprod
-    - prod
-    - sndbx
-    - test
-  keyVaultName:
-    maxLength: 24
-    minLength: 3
-    pattern: '^[a-zA-Z][a-zA-Z0-9-]+$'
-    type: string
-  networkInterfaceName:
-    maxLength: 80
-    pattern: '^[a-zA-Z0-9][a-zA-Z0-9-_.]*[a-zA-Z0-9_]$'
-    type: string
-  osDiskName:
-    maxLength: 80
-    minLength: 3
-    pattern: '^[a-zA-Z][a-zA-Z0-9-]+$'
-    type: string
-  osDiskSizeInGB:
-    type: number
-  osDiskSku:
-    type: string
-    enum:
-    - Standard_LRS
-    - StandardSSD_LRS
-    - Premium_LRS
-  resourceGroupLocation:
-    minLength: 1
+    pattern: '^[a-zA-Z0-9-]+$'
     type: string
   resourceGroupName:
-    maxLength: 90
-    minLength: 1
-    pattern: '^[a-zA-Z0-9-\._()]+$'
     type: string
-  resourceTagsString:
+  resourceGroupLocation:
+    type: string     
+  resourceTags:
     minLength: 1
+    type: object
+  storageAccountResourceGroupName:
+    maxLength: 40
+    minLength: 1
+    pattern: '^[a-zA-Z0-9-]+$'
+    type: string
+  storageAccountName:
+    maxLength: 24
+    minLength: 3
+    pattern: '^[a-zA-Z0-9]+$'
     type: string
   subscriptionID:
-    pattern: '^[a-zA-Z0-9]{8}-([a-zA-Z0-9]{4}-){3}[a-zA-Z0-9]{12}$'
     type: string
-  useSystemAssignedManagedIdentity:
-    type: boolean
-  virtualMachineImageOffer:
-    type: string
-    enum:
-    - WindowsServer
-    - Windows-10
-  virtualMachineImagePublisher:
-    type: string
-    enum:
-    - MicrosoftWindowsServer
-    - MicrosoftWindowsDesktop
-  virtualMachineImageSku:
-    type: string
-    enum:
-    - 2016-Datacenter
-    - 2019-Datacenter
-    - rs5-pro
-  virtualMachineName:
-    maxLength: 15
-    minLength: 2
-    type: string
-    pattern: '^[a-zA-Z0-9][a-zA-Z0-9-.]*[a-zA-Z0-9]$'
-  virtualMachineSize:
-    type: string
+
+ 

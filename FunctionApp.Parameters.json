@@ -1,0 +1,54 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "applicationInsightsName": {
+            "value": "",
+            "metadata": {
+            "description": "Name of the Application Insights resource."
+            }
+        },
+        "applicationInsightsResourceGroupName": {
+            "value": "",
+            "metadata": {
+            "description": "Name of the Application Insights Resource Group."
+            }
+        },
+        "applicationServicePlanName": {
+            "value": "",
+            "metadata": {
+                "description": "Name of the Application Service Plan resource being used."
+            }
+        },
+        "applicationServicePlanResourceGroupName": {
+            "value": "",
+            "metadata": {
+                "description": "Name of the Application Service Plan resource being used."
+            }
+        },
+        "functionAppName": {
+            "value": "",
+            "metadata": {
+            "description": "The name of the Function App that you wish to create."
+            }
+        },
+        "resourceTags": {
+            "value": "",
+            "metadata": {
+                "description": "Tags to help identify the resources."
+            }
+        },
+        "storageAccountName": {
+            "value": "",
+            "metadata": {
+            "description": "The Storage Account name."
+            }
+        },
+        "storageAccountResourceGroupName": {
+            "value": "",
+            "metadata": {
+            "description": "The resource group name for the Storage Account."
+            }
+        }
+    }
+}
